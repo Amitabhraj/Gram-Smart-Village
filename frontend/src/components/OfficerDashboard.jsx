@@ -1,32 +1,29 @@
 import React, { useState } from 'react';
 import { 
-  Building2, AlertTriangle, CheckCircle, Clock, IndianRupee, 
-  MapPin, Send, Filter, RefreshCw, Award, ArrowUpRight, ShieldCheck,
-  FileCheck, Users, Megaphone, Check
+  Building2, AlertTriangle, CheckCircle2, Clock, IndianRupee, 
+  MapPin, Send, Filter, RefreshCw, ShieldCheck, 
+  FileCheck, Users, Megaphone, Check, Lock, User
 } from 'lucide-react';
 import { api } from '../api';
 
 export default function OfficerDashboard({ 
+  currentOfficer,
   summary, 
   grievances, 
   services, 
   fertilizers, 
   refreshData,
-  lang 
+  selectedPlace
 }) {
-  const isHi = lang === 'hi';
   const [selectedWard, setSelectedWard] = useState('ALL');
   const [activeTab, setActiveTab] = useState('grievances'); // 'grievances' | 'services' | 'broadcast'
   const [updatingId, setUpdatingId] = useState(null);
   const [successToast, setSuccessToast] = useState('');
 
-  // Quick action local edits
-  const [actionState, setActionState] = useState({});
-
   // Broadcast state
   const [broadcast, setBroadcast] = useState({
     title: '',
-    category: 'WATER_SUPPLY',
+    category: 'CIVIC_SUPPLY',
     priority: 'HIGH',
     event_date: '',
     venue: '',
@@ -50,7 +47,6 @@ export default function OfficerDashboard({
     setTimeout(() => setSuccessToast(''), 3500);
   };
 
-  // 1-Click Status change for Grievance
   const handleQuickGrievanceUpdate = async (id, newStatus, assignedTo, funds, notes) => {
     setUpdatingId(id);
     try {
@@ -58,9 +54,9 @@ export default function OfficerDashboard({
         status: newStatus,
         assigned_to: assignedTo,
         funds_allocated: funds,
-        notes: notes || `Action updated to ${newStatus} by Panchayat Officer`
+        notes: notes || `Action updated to ${newStatus} by ${currentOfficer?.name || 'Local Officer'}`
       });
-      showToast(isHi ? `शिकायत #${id} की स्थिति सफलतापूर्वक अपडेट की गई!` : `Grievance #${id} updated in 1 click!`);
+      showToast(`Grievance #${id} updated in 1 click!`);
       await refreshData();
     } catch (e) {
       alert("Error updating action");
@@ -69,16 +65,15 @@ export default function OfficerDashboard({
     }
   };
 
-  // 1-Click Decision for Certificates
   const handleServiceDecision = async (id, decision, remarks) => {
     setUpdatingId(id);
     try {
       await api.updateServiceDecision(id, {
         status: decision,
-        remarks: remarks || `Status set to ${decision} by Village Officer`,
+        remarks: remarks || `Status set to ${decision} by ${currentOfficer?.name || 'Officer'}`,
         appointment_date: decision === 'APPROVED' ? 'Digital Seal Stamped & Approved' : 'Scheduled at Panchayat Bhavan'
       });
-      showToast(isHi ? `आवेदन स्वीकृत एवं सील सत्यापित!` : `Service Application updated successfully!`);
+      showToast(`Service application certified & stamped!`);
       await refreshData();
     } catch (e) {
       alert("Error updating decision");
@@ -87,17 +82,16 @@ export default function OfficerDashboard({
     }
   };
 
-  // Publish Notice
   const handleBroadcastSubmit = async (e) => {
     e.preventDefault();
     if (!broadcast.title || !broadcast.description) return;
     setIsPublishing(true);
     try {
       await api.createNotice(broadcast);
-      showToast(isHi ? 'ग्राम सूचना बोर्ड पर घोषणा जारी की गई!' : 'Village announcement published live!');
+      showToast('Official notice published live to public board!');
       setBroadcast({
         title: '',
-        category: 'WATER_SUPPLY',
+        category: 'CIVIC_SUPPLY',
         priority: 'HIGH',
         event_date: '',
         venue: '',
@@ -118,118 +112,115 @@ export default function OfficerDashboard({
 
   return (
     <div className="space-y-6">
-      {/* Toast banner */}
+      {/* Toast Alert */}
       {successToast && (
-        <div className="fixed bottom-5 right-5 z-50 bg-stone-900 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-emerald-500/40 animate-bounce">
-          <CheckCircle className="w-5 h-5 text-emerald-400" />
-          <span className="text-sm font-semibold">{successToast}</span>
+        <div className="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3 border border-emerald-500/50 animate-bounce text-xs font-semibold">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          <span>{successToast}</span>
         </div>
       )}
 
-      {/* Top Banner & Context */}
-      <div className="bg-gradient-to-r from-stone-900 via-stone-800 to-emerald-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
-        <div className="relative z-10">
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-            <div>
-              <div className="inline-flex items-center gap-2 bg-amber-400/20 text-amber-300 text-xs px-3 py-1 rounded-full font-bold mb-2">
-                <Building2 className="w-3.5 h-3.5" />
-                {isHi ? 'अधिकारी वन-क्लिक कमांड केंद्र' : 'Officer 1-View Command Center'}
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-                {isHi ? 'ग्राम पंचायत नियंत्रण पट्ट' : 'Panchayat Operational Command'}
-              </h2>
-              <p className="text-stone-300 text-sm max-w-2xl mt-1">
-                {isHi 
-                  ? 'बिना किसी जटिल AI प्राम्प्ट या कागजी रजिस्टर के, पूरे गांव की समस्याओं का 1 दृश्य में त्वरित निस्तारण।' 
-                  : 'Zero AI prompts or research needed. Real-time civic radar, 1-click approvals, fund sanctions, and bottleneck management.'}
-              </p>
+      {/* Top Officer Clearance Banner */}
+      <div className="bg-slate-900 text-white rounded-2xl p-6 sm:p-7 border border-slate-800 shadow-lg relative overflow-hidden">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 uppercase tracking-wider">
+                Clearance: Level 2 Administrative
+              </span>
+              <span className="text-xs text-slate-400 font-mono">
+                {currentOfficer?.badge || 'VDO-AUTH-901'}
+              </span>
             </div>
-            
-            <button
-              onClick={refreshData}
-              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl text-xs font-semibold text-white transition border border-white/20"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>{isHi ? 'डेटा रीफ्रेश' : 'Sync Live Data'}</span>
-            </button>
+
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+              Officer Command Radar & Fast Redressal Desk
+            </h2>
+
+            <p className="text-xs text-slate-300 mt-1 max-w-2xl">
+              Officer: <strong className="text-white">{currentOfficer?.name || 'Local Panchayat Officer'}</strong> ({currentOfficer?.designation || 'VDO'}) · Jurisdiction: {currentOfficer?.panchayat || selectedPlace?.gram_panchayat || 'Division'}.
+            </p>
           </div>
 
-          {/* 1-View Metric Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mt-6">
-            <div className="bg-white/10 backdrop-blur rounded-2xl p-4 border border-white/10">
-              <div className="flex items-center justify-between text-stone-300 text-xs font-medium mb-1">
-                <span>{isHi ? 'अति-आवश्यक आपात' : 'Critical Alerts'}</span>
-                <AlertTriangle className="w-4 h-4 text-rose-400" />
-              </div>
-              <div className="text-2xl sm:text-3xl font-black text-rose-400">
-                {metrics.critical_unresolved}
-              </div>
-              <span className="text-[11px] text-stone-400">
-                {isHi ? 'तत्काल ध्यान अपेक्षित' : 'Needs immediate sanction'}
-              </span>
-            </div>
-
-            <div className="bg-white/10 backdrop-blur rounded-2xl p-4 border border-white/10">
-              <div className="flex items-center justify-between text-stone-300 text-xs font-medium mb-1">
-                <span>{isHi ? 'स्वीकृत राहत बजट' : 'Funds Sanctioned'}</span>
-                <IndianRupee className="w-4 h-4 text-amber-400" />
-              </div>
-              <div className="text-2xl sm:text-3xl font-black text-amber-300">
-                ₹{metrics.total_funds_sanctioned.toLocaleString('en-IN')}
-              </div>
-              <span className="text-[11px] text-stone-400">
-                {isHi ? 'मोटर/लाइट/पाइपलाइन मरम्मत' : 'Repair allocations'}
-              </span>
-            </div>
-
-            <div className="bg-white/10 backdrop-blur rounded-2xl p-4 border border-white/10">
-              <div className="flex items-center justify-between text-stone-300 text-xs font-medium mb-1">
-                <span>{isHi ? 'लंबित प्रमाण पत्र' : 'Pending Certificates'}</span>
-                <FileCheck className="w-4 h-4 text-sky-400" />
-              </div>
-              <div className="text-2xl sm:text-3xl font-black text-sky-300">
-                {metrics.pending_applications}
-              </div>
-              <span className="text-[11px] text-stone-400">
-                {isHi ? '1-क्लिक डिजिटल मुहर योग्य' : 'Awaiting digital seal'}
-              </span>
-            </div>
-
-            <div className="bg-white/10 backdrop-blur rounded-2xl p-4 border border-white/10">
-              <div className="flex items-center justify-between text-stone-300 text-xs font-medium mb-1">
-                <span>{isHi ? 'कुल निस्तारित' : 'Total Resolved'}</span>
-                <CheckCircle className="w-4 h-4 text-emerald-400" />
-              </div>
-              <div className="text-2xl sm:text-3xl font-black text-emerald-300">
-                {metrics.resolved_grievances} / {metrics.total_grievances}
-              </div>
-              <span className="text-[11px] text-stone-400">
-                {isHi ? 'सफलता दर' : 'Resolution rate'}: {Math.round((metrics.resolved_grievances / (metrics.total_grievances || 1)) * 100)}%
-              </span>
-            </div>
-          </div>
+          <button
+            onClick={refreshData}
+            className="self-start md:self-auto bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-2"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Sync Live Radar</span>
+          </button>
         </div>
 
-        {/* Decorative background glow */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+        {/* 1-View Metric Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mt-6">
+          <div className="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
+            <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
+              <span>Critical Emergency</span>
+              <AlertTriangle className="w-4 h-4 text-rose-400" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-rose-400 font-mono">
+              {metrics.critical_unresolved}
+            </div>
+            <span className="text-[11px] text-slate-400 block mt-0.5">
+              Immediate sanction required
+            </span>
+          </div>
+
+          <div className="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
+            <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
+              <span>Funds Sanctioned</span>
+              <IndianRupee className="w-4 h-4 text-emerald-400" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-emerald-300 font-mono">
+              ₹{metrics.total_funds_sanctioned.toLocaleString('en-IN')}
+            </div>
+            <span className="text-[11px] text-slate-400 block mt-0.5">
+              Approved contingency repair
+            </span>
+          </div>
+
+          <div className="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
+            <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
+              <span>Pending Certificates</span>
+              <FileCheck className="w-4 h-4 text-sky-400" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-sky-300 font-mono">
+              {metrics.pending_applications}
+            </div>
+            <span className="text-[11px] text-slate-400 block mt-0.5">
+              Ready for 1-click digital seal
+            </span>
+          </div>
+
+          <div className="bg-slate-800/80 rounded-xl p-4 border border-slate-700">
+            <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
+              <span>Resolution Rate</span>
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-white font-mono">
+              {Math.round((metrics.resolved_grievances / (metrics.total_grievances || 1)) * 100)}%
+            </div>
+            <span className="text-[11px] text-slate-400 block mt-0.5">
+              {metrics.resolved_grievances} / {metrics.total_grievances} closed
+            </span>
+          </div>
+        </div>
       </div>
 
-      {/* Ward Bottleneck Radar & Cooperative Fertilizer Alert (1-View Officer Insight) */}
+      {/* Ward Bottlenecks Radar & Fertilizer Health */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        {/* Ward Bottlenecks */}
-        <div className="md:col-span-2 bg-white rounded-3xl p-5 sm:p-6 border border-stone-200 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
+        <div className="md:col-span-2 bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-sm">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
             <div>
-              <h3 className="font-bold text-stone-900 flex items-center gap-2">
+              <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-emerald-600" />
-                {isHi ? 'वार्ड-वार समस्या रडार (हॉटस्पॉट)' : 'Ward Bottleneck Radar'}
+                <span>Ward Bottleneck Radar</span>
               </h3>
-              <p className="text-xs text-stone-500">
-                {isHi 
-                  ? 'अधिकारी सीधे देख सकते हैं कि किस वार्ड में काम रुका हुआ है' 
-                  : 'Instantly spot which ward needs contractors without reading registers'}
+              <p className="text-xs text-slate-500">
+                Identifies ward hotspots instantly without reading manual field notebooks
               </p>
             </div>
+
             <div className="flex gap-1">
               {['ALL', 'Ward 1', 'Ward 2', 'Ward 3', 'Ward 4', 'Ward 5'].map(w => (
                 <button
@@ -237,8 +228,8 @@ export default function OfficerDashboard({
                   onClick={() => setSelectedWard(w)}
                   className={`text-[11px] px-2.5 py-1 rounded-lg font-medium transition ${
                     selectedWard === w
-                      ? 'bg-emerald-700 text-white shadow-sm'
-                      : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                      ? 'bg-slate-900 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
                   {w}
@@ -247,34 +238,34 @@ export default function OfficerDashboard({
             </div>
           </div>
 
-          {/* Quick breakdown list */}
-          <div className="space-y-2.5 mt-3">
+          <div className="space-y-2.5">
             {[
-              { ward: 'Ward 3 - Patel Mohalla', issues: 1, type: 'Water Pipeline Burst (Critical)', fund: '₹4,500' },
-              { ward: 'Ward 1 - Gandhi Chowk', issues: 1, type: '25 KVA Transformer Burnt (Sanctioned)', fund: '₹28,000' },
-              { ward: 'Ward 5 - Harijan Basti', issues: 1, type: 'Handpump lever broken & dirty water', fund: 'Pending' },
-              { ward: 'Ward 4 - Narmada Road', issues: 1, type: 'Drainage culvert cracked', fund: 'Pending' },
-              { ward: 'Ward 2 - Purana Thana', issues: 1, type: 'Street lights solar battery', fund: 'Resolved' },
+              { ward: 'Ward 3 - Patel Mohalla', type: 'Drinking Water Pipeline Fracture', status: 'In Progress', fund: '₹4,500' },
+              { ward: 'Ward 1 - Gandhi Chowk', type: '25 KVA Agricultural Transformer Replacement', status: 'Sanctioned', fund: '₹28,000' },
+              { ward: 'Ward 5 - Harijan Basti', type: 'Handpump Lever Replacement & Sanitation', status: 'Pending', fund: '₹0' },
+              { ward: 'Ward 2 - Narmada Marg', type: 'Drainage Culvert Slab Repair', status: 'Pending', fund: '₹0' },
+              { ward: 'Ward 4 - Station Road', type: 'Solar Lighting Inverter Servicing', status: 'Resolved', fund: '₹3,200' },
             ].map((item, idx) => (
               <div 
                 key={idx}
-                className="flex items-center justify-between p-3 rounded-2xl bg-stone-50 border border-stone-100 text-xs"
+                className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs"
               >
                 <div className="flex items-center gap-3">
-                  <span className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-[11px]">
+                  <span className="w-6 h-6 rounded-lg bg-slate-200 text-slate-800 font-bold flex items-center justify-center text-[11px] font-mono">
                     {idx + 1}
                   </span>
                   <div>
-                    <span className="font-semibold text-stone-900 block">{item.ward}</span>
-                    <span className="text-stone-500 text-[11px]">{item.type}</span>
+                    <span className="font-semibold text-slate-900 block">{item.ward}</span>
+                    <span className="text-slate-500 text-[11px]">{item.type}</span>
                   </div>
                 </div>
+
                 <div className="text-right">
-                  <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
-                    item.fund === 'Resolved' ? 'bg-emerald-100 text-emerald-800' :
-                    item.fund === 'Pending' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                    item.status === 'Resolved' ? 'bg-emerald-100 text-emerald-800' :
+                    item.status === 'Pending' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'
                   }`}>
-                    {item.fund}
+                    {item.status} · {item.fund}
                   </span>
                 </div>
               </div>
@@ -282,378 +273,309 @@ export default function OfficerDashboard({
           </div>
         </div>
 
-        {/* Local PACS Fertilizer & Supply Alert */}
-        <div className="bg-white rounded-3xl p-5 sm:p-6 border border-stone-200 shadow-sm flex flex-col justify-between">
+        {/* PACS Fertilizer Supply Health */}
+        <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-bold text-stone-900 flex items-center gap-2">
-                🌾 {isHi ? 'सहकारी खाद गोदाम स्थिति' : 'PACS Fertilizer Inventory'}
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-bold text-slate-900 text-sm">
+                PACS Cooperative Inventory
               </h3>
-              <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">
-                {isHi ? 'लाइव' : 'Live'}
+              <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">
+                Online
               </span>
             </div>
-            <p className="text-xs text-stone-500 mb-4">
-              {isHi 
-                ? 'कृषक भीड़ व कमी से पहले अधिकारी को स्टॉक अलर्ट' 
-                : 'Officer alert before farmer queues form at local society'}
+            <p className="text-xs text-slate-500 mb-4">
+              Real-time fertilizer buffer to avoid agricultural shortages
             </p>
 
             <div className="space-y-3">
               {fertilizers.map((fert, idx) => (
-                <div key={idx} className="p-2.5 rounded-xl bg-amber-50/50 border border-amber-200/50">
-                  <div className="flex justify-between items-center text-xs font-semibold text-stone-800 mb-1">
-                    <span className="truncate max-w-[160px]">{fert.fertilizer_name}</span>
-                    <span className="text-emerald-700 font-bold">{fert.bags_available} {isHi ? 'बोरी' : 'bags'}</span>
+                <div key={idx} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                  <div className="flex justify-between items-center text-xs font-semibold text-slate-800 mb-1">
+                    <span className="truncate max-w-[150px]">{fert.fertilizer_name}</span>
+                    <span className="text-emerald-700 font-bold font-mono">{fert.bags_available} Bags</span>
                   </div>
-                  <div className="w-full bg-stone-200 h-1.5 rounded-full overflow-hidden">
+                  <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
                     <div 
                       className={`h-full ${fert.bags_available > 100 ? 'bg-emerald-600' : 'bg-amber-500'}`}
                       style={{ width: `${Math.min(100, (fert.bags_available / 500) * 100)}%` }}
                     />
                   </div>
-                  <div className="flex justify-between text-[10px] text-stone-500 mt-1">
-                    <span>{isHi ? 'शासकीय दर' : 'Price'}: ₹{fert.price_per_bag}</span>
-                    <span>{fert.bags_available > 50 ? (isHi ? 'पर्याप्त' : 'In Stock') : (isHi ? 'सीमित' : 'Low Stock')}</span>
+                  <div className="flex justify-between text-[10px] text-slate-500 mt-1">
+                    <span>Govt Price: ₹{fert.price_per_bag}</span>
+                    <span>{fert.bags_available > 50 ? 'Adequate' : 'Low Buffer'}</span>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="mt-4 pt-3 border-t border-stone-100 text-[11px] text-stone-500 flex items-center gap-1.5">
-            <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-            <span>{isHi ? 'सोहागपुर ब्लॉक नोडल गोदाम से सिंक' : 'Synced with Tehsil PACS warehouse'}</span>
+          <div className="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-500">
+            Nodal Warehouse: Tehsil Cooperative Pipariya
           </div>
         </div>
       </div>
 
-      {/* Tab Switcher: 1-Click Action Queues */}
-      <div className="bg-white rounded-3xl border border-stone-200 shadow-sm overflow-hidden">
-        <div className="border-b border-stone-200 bg-stone-50/70 px-6 py-3 flex items-center justify-between flex-wrap gap-3">
+      {/* Action Queues */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="border-b border-slate-200 bg-slate-50 px-6 py-3 flex items-center justify-between flex-wrap gap-2">
           <div className="flex gap-2">
             <button
               onClick={() => setActiveTab('grievances')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
                 activeTab === 'grievances'
-                  ? 'bg-stone-900 text-white shadow-sm'
-                  : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200'
+                  ? 'bg-slate-900 text-white shadow-sm'
+                  : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
               }`}
             >
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-              <span>{isHi ? 'शिकायत त्वरित निस्तारण' : '1-Click Grievance Redressal'}</span>
-              <span className="bg-amber-400/20 text-amber-600 text-[10px] px-1.5 py-0.2 rounded-full">
+              <span>Grievances Fast Redressal</span>
+              <span className="bg-slate-200 text-slate-800 text-[10px] px-1.5 py-0.2 rounded font-mono">
                 {filteredGrievances.length}
               </span>
             </button>
 
             <button
               onClick={() => setActiveTab('services')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
                 activeTab === 'services'
-                  ? 'bg-stone-900 text-white shadow-sm'
-                  : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200'
+                  ? 'bg-slate-900 text-white shadow-sm'
+                  : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
               }`}
             >
-              <FileCheck className="w-3.5 h-3.5 text-sky-400" />
-              <span>{isHi ? 'प्रमाण पत्र डिजिटल स्वीकृति' : '1-Click Certificate Desk'}</span>
-              <span className="bg-sky-400/20 text-sky-600 text-[10px] px-1.5 py-0.2 rounded-full">
+              <span>1-Click Certificate Stamp Desk</span>
+              <span className="bg-slate-200 text-slate-800 text-[10px] px-1.5 py-0.2 rounded font-mono">
                 {services.length}
               </span>
             </button>
 
             <button
               onClick={() => setActiveTab('broadcast')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
                 activeTab === 'broadcast'
-                  ? 'bg-stone-900 text-white shadow-sm'
-                  : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200'
+                  ? 'bg-slate-900 text-white shadow-sm'
+                  : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
               }`}
             >
-              <Megaphone className="w-3.5 h-3.5 text-emerald-400" />
-              <span>{isHi ? 'ग्राम सूचना प्रसारण' : 'Broadcast Village Notice'}</span>
+              <Megaphone className="w-3.5 h-3.5" />
+              <span>Broadcast Village Notice</span>
             </button>
           </div>
         </div>
 
-        {/* Content 1: Grievances 1-Click Action Table */}
+        {/* Tab 1: Grievances fast actions */}
         {activeTab === 'grievances' && (
-          <div className="overflow-x-auto p-4 sm:p-6">
-            <div className="space-y-4">
-              {filteredGrievances.map((g) => {
-                const isWorking = updatingId === g.id;
-                return (
-                  <div 
-                    key={g.id} 
-                    className="p-5 rounded-2xl border border-stone-200 bg-stone-50/50 hover:bg-white transition-all shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4"
-                  >
-                    <div className="space-y-1.5 max-w-2xl">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-mono text-xs font-bold text-stone-900 bg-stone-200 px-2 py-0.5 rounded">
-                          {g.ticket_id}
-                        </span>
-                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                          {g.ward}
-                        </span>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          g.urgency === 'CRITICAL' ? 'bg-rose-100 text-rose-800 animate-pulse' :
-                          g.urgency === 'URGENT' ? 'bg-orange-100 text-orange-800' : 'bg-stone-100 text-stone-600'
-                        }`}>
-                          {g.urgency}
-                        </span>
-                        <span className="text-xs font-bold text-stone-700">
-                          {g.category}
-                        </span>
-                      </div>
-
-                      <p className="text-sm text-stone-800 font-medium">
-                        {g.description}
-                      </p>
-
-                      <div className="flex items-center gap-4 text-xs text-stone-500 flex-wrap">
-                        <span>👤 {g.citizen_name} ({g.mobile})</span>
-                        {g.landmark && <span>📍 {g.landmark}</span>}
-                        {g.funds_allocated > 0 && (
-                          <span className="text-amber-800 font-bold bg-amber-100 px-2 py-0.5 rounded">
-                            💰 Allocated: ₹{g.funds_allocated}
-                          </span>
-                        )}
-                        {g.assigned_to && (
-                          <span className="text-emerald-800 font-semibold">
-                            👷 Assigned: {g.assigned_to}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* 1-Click Fast Actions for Officer */}
-                    <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap pt-2 lg:pt-0 border-t lg:border-t-0 border-stone-200">
-                      {g.status !== 'RESOLVED' ? (
-                        <>
-                          <button
-                            disabled={isWorking}
-                            onClick={() => handleQuickGrievanceUpdate(
-                              g.id, 
-                              'IN_PROGRESS', 
-                              'Lineman & Repair Team', 
-                              g.funds_allocated || 2500,
-                              'Dispatched field repair team immediately.'
-                            )}
-                            className="text-xs font-bold px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-900 transition flex items-center gap-1 shadow-sm whitespace-nowrap"
-                          >
-                            <span>⚡ {isHi ? 'टीम भेजें' : 'Assign Team'}</span>
-                          </button>
-
-                          <button
-                            disabled={isWorking}
-                            onClick={() => handleQuickGrievanceUpdate(
-                              g.id, 
-                              'SANCTIONED', 
-                              g.assigned_to || 'Panchayat Contractor', 
-                              g.funds_allocated ? g.funds_allocated + 5000 : 5000,
-                              'Emergency Panchayat repair budget sanctioned.'
-                            )}
-                            className="text-xs font-bold px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white transition flex items-center gap-1 shadow-sm whitespace-nowrap"
-                          >
-                            <IndianRupee className="w-3.5 h-3.5" />
-                            <span>{isHi ? 'बजट स्वीकृत' : 'Sanction ₹5k'}</span>
-                          </button>
-
-                          <button
-                            disabled={isWorking}
-                            onClick={() => handleQuickGrievanceUpdate(
-                              g.id, 
-                              'RESOLVED', 
-                              g.assigned_to, 
-                              g.funds_allocated,
-                              'Field inspection completed. Problem resolved successfully.'
-                            )}
-                            className="text-xs font-bold px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white transition flex items-center gap-1 shadow-sm whitespace-nowrap"
-                          >
-                            <Check className="w-3.5 h-3.5" />
-                            <span>{isHi ? 'निस्तारित करें' : 'Mark Resolved'}</span>
-                          </button>
-                        </>
-                      ) : (
-                        <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-emerald-100 px-3 py-1.5 rounded-xl">
-                          <CheckCircle className="w-4 h-4 text-emerald-600" />
-                          <span>{isHi ? 'सफलतापूर्वक निस्तारित' : 'Resolved'}</span>
-                        </div>
-                      )}
-                    </div>
+          <div className="p-4 sm:p-6 space-y-4">
+            {filteredGrievances.map((g) => (
+              <div 
+                key={g.id} 
+                className="p-5 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white transition shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4"
+              >
+                <div className="space-y-1.5 max-w-2xl">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-mono text-xs font-bold text-slate-900 bg-slate-200 px-2 py-0.5 rounded">
+                      {g.ticket_id}
+                    </span>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
+                      {g.ward}
+                    </span>
+                    <span className="text-xs font-bold text-slate-800">
+                      {g.category}
+                    </span>
                   </div>
-                );
-              })}
-            </div>
+
+                  <p className="text-xs sm:text-sm text-slate-800 font-medium leading-relaxed">
+                    {g.description}
+                  </p>
+
+                  <div className="flex items-center gap-3 text-xs text-slate-600 flex-wrap pt-1">
+                    <span className="font-semibold text-emerald-900 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                      Officer View: {g.citizen_name_display || g.citizen_name} · {g.mobile_display || g.mobile}
+                    </span>
+                    {g.landmark && <span>Landmark: {g.landmark}</span>}
+                    {g.funds_allocated > 0 && (
+                      <span className="font-bold text-slate-800">
+                        Sanctioned: ₹{g.funds_allocated}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* 1-Click Fast Actions */}
+                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap pt-2 lg:pt-0">
+                  {g.status !== 'RESOLVED' ? (
+                    <>
+                      <button
+                        disabled={updatingId === g.id}
+                        onClick={() => handleQuickGrievanceUpdate(
+                          g.id, 
+                          'IN_PROGRESS', 
+                          'Emergency Repair Team', 
+                          g.funds_allocated || 2500,
+                          'Field repair team assigned by Panchayat Officer.'
+                        )}
+                        className="text-xs font-bold px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-900 transition shadow-sm"
+                      >
+                        Assign Team
+                      </button>
+
+                      <button
+                        disabled={updatingId === g.id}
+                        onClick={() => handleQuickGrievanceUpdate(
+                          g.id, 
+                          'SANCTIONED', 
+                          g.assigned_to || 'Panchayat Contractor', 
+                          (g.funds_allocated || 0) + 5000,
+                          'Emergency repair budget approved.'
+                        )}
+                        className="text-xs font-bold px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white transition flex items-center gap-1 shadow-sm"
+                      >
+                        <IndianRupee className="w-3 h-3 text-emerald-400" />
+                        <span>Sanction ₹5k</span>
+                      </button>
+
+                      <button
+                        disabled={updatingId === g.id}
+                        onClick={() => handleQuickGrievanceUpdate(
+                          g.id, 
+                          'RESOLVED', 
+                          g.assigned_to, 
+                          g.funds_allocated,
+                          'Inspection certified. Problem resolved.'
+                        )}
+                        className="text-xs font-bold px-3 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white transition shadow-sm"
+                      >
+                        Mark Resolved
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-3 py-1.5 rounded-lg flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Certified Resolved</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
-        {/* Content 2: Certificates 1-Click Decision Desk */}
+        {/* Tab 2: Certificate 1-Click Stamp */}
         {activeTab === 'services' && (
-          <div className="overflow-x-auto p-4 sm:p-6">
-            <div className="space-y-4">
-              {services.map((s) => {
-                const isWorking = updatingId === s.id;
-                return (
-                  <div 
-                    key={s.id} 
-                    className="p-5 rounded-2xl border border-stone-200 bg-stone-50/50 hover:bg-white transition-all shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4"
-                  >
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-mono text-xs font-bold text-sky-900 bg-sky-100 px-2 py-0.5 rounded">
-                          {s.token_number}
-                        </span>
-                        <span className="text-xs font-bold text-stone-900">
-                          {s.service_type}
-                        </span>
-                        <span className="text-xs text-stone-500 font-medium">
-                          ({s.ward})
-                        </span>
-                      </div>
-
-                      <div className="text-sm font-semibold text-stone-800">
-                        {s.applicant_name} <span className="font-normal text-stone-500">S/o, D/o {s.guardian_name}</span>
-                      </div>
-
-                      <p className="text-xs text-stone-600">
-                        <span className="font-semibold">{isHi ? 'उद्देश्य' : 'Purpose'}:</span> {s.reason || 'Scholarship / Welfare requirement'}
-                      </p>
-
-                      <div className="flex items-center gap-3 text-xs text-stone-500">
-                        <span>📞 {s.mobile}</span>
-                        <span>Aadhaar: **** {s.aadhaar_last_four}</span>
-                        {s.officer_remarks && (
-                          <span className="text-sky-800 font-medium">
-                            📝 {s.officer_remarks}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* 1-Click Decision Buttons */}
-                    <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap pt-2 lg:pt-0">
-                      {s.status !== 'APPROVED' && s.status !== 'READY_FOR_PICKUP' ? (
-                        <>
-                          <button
-                            disabled={isWorking}
-                            onClick={() => handleServiceDecision(s.id, 'APPROVED', 'Kotwar & records verified. Digitally stamped.')}
-                            className="text-xs font-bold px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white transition flex items-center gap-1 shadow-sm whitespace-nowrap"
-                          >
-                            <ShieldCheck className="w-3.5 h-3.5" />
-                            <span>{isHi ? 'डिजिटल सील व स्वीकृति' : '1-Click Approve & Seal'}</span>
-                          </button>
-
-                          <button
-                            disabled={isWorking}
-                            onClick={() => handleServiceDecision(s.id, 'UNDER_VERIFICATION', 'Patwari field enquiry requested.')}
-                            className="text-xs font-bold px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-900 transition flex items-center gap-1 shadow-sm whitespace-nowrap"
-                          >
-                            <span>{isHi ? 'जांच संस्तुति' : 'Verify Records'}</span>
-                          </button>
-                        </>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-3 py-1.5 rounded-xl flex items-center gap-1">
-                            <CheckCircle className="w-4 h-4 text-emerald-600" />
-                            {isHi ? 'डिजिटल मुहर स्वीकृत' : 'Approved & Sealed'}
-                          </span>
-                          <button
-                            onClick={() => alert(`Certificate token ${s.token_number} generated with digital stamp: Panchayat Pipariya`)}
-                            className="text-xs font-bold px-3 py-1.5 rounded-xl bg-stone-900 text-white hover:bg-stone-800 transition"
-                          >
-                            {isHi ? 'प्रमाण पत्र डाउनलोड' : 'Print Certificate'}
-                          </button>
-                        </div>
-                      )}
-                    </div>
+          <div className="p-4 sm:p-6 space-y-4">
+            {services.map((s) => (
+              <div 
+                key={s.id} 
+                className="p-5 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white transition shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4"
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-bold bg-sky-100 text-sky-900 px-2 py-0.5 rounded">
+                      {s.token_number}
+                    </span>
+                    <span className="text-xs font-bold text-slate-900">
+                      {s.service_type}
+                    </span>
                   </div>
-                );
-              })}
-            </div>
+
+                  <p className="text-xs text-slate-700">
+                    Applicant: <strong className="text-slate-900">{s.applicant_name_display || s.applicant_name}</strong> · Contact: {s.mobile_display || s.mobile} · Ward: {s.ward}
+                  </p>
+
+                  <p className="text-xs text-slate-500">
+                    Reason: {s.reason || 'Scholarship / Welfare verification'}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {s.status !== 'APPROVED' && s.status !== 'READY_FOR_PICKUP' ? (
+                    <button
+                      disabled={updatingId === s.id}
+                      onClick={() => handleServiceDecision(s.id, 'APPROVED', 'Panchayat Kotwar verification complete. Digitally stamped.')}
+                      className="text-xs font-bold px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white transition flex items-center gap-1.5 shadow-sm"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>1-Click Approve & Affix Seal</span>
+                    </button>
+                  ) : (
+                    <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-3 py-1.5 rounded-lg flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Approved & Sealed</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
-        {/* Content 3: Quick Broadcast Notice */}
+        {/* Tab 3: Broadcast Notice */}
         {activeTab === 'broadcast' && (
-          <div className="p-6 max-w-2xl">
-            <h4 className="font-bold text-stone-900 text-base mb-1">
-              📢 {isHi ? 'तत्काल ग्राम सूचना जारी करें' : 'Publish Urgent Village Notice'}
+          <div className="p-6 max-w-xl">
+            <h4 className="font-bold text-slate-900 text-sm mb-1">
+              Broadcast Official Panchayat Notice
             </h4>
-            <p className="text-xs text-stone-500 mb-4">
-              {isHi 
-                ? 'यह सूचना नागरिक पोर्टल, पंचायत डिस्प्ले और व्हाट्सएप अलर्ट पर तुरंत प्रसारित होगी।' 
-                : 'Instantly broadcasts to Villager Portal and Panchayat board in 1 click.'}
+            <p className="text-xs text-slate-500 mb-4">
+              Instantly publishes to the citizen dashboard and village public display.
             </p>
 
-            <form onSubmit={handleBroadcastSubmit} className="space-y-4">
+            <form onSubmit={handleBroadcastSubmit} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-bold text-stone-700 mb-1">
-                  {isHi ? 'सूचना शीर्षक' : 'Notice Headline'}
-                </label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Notice Headline</label>
                 <input
                   type="text"
                   required
-                  placeholder={isHi ? 'उदा. नहर में पानी छोड़ने बाबत / टीका शिविर' : 'e.g., Canal water release schedule / Free medical camp'}
+                  placeholder="e.g. Emergency Drinking Water Tanker Schedule / Special Gram Sabha"
                   value={broadcast.title}
                   onChange={e => setBroadcast({ ...broadcast, title: e.target.value })}
-                  className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                  className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-800"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-stone-700 mb-1">
-                    {isHi ? 'श्रेणी' : 'Category'}
-                  </label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Category</label>
                   <select
                     value={broadcast.category}
                     onChange={e => setBroadcast({ ...broadcast, category: e.target.value })}
-                    className="w-full text-sm px-3 py-2.5 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white"
+                    className="w-full text-xs px-3 py-2.5 rounded-xl border border-slate-300 bg-white font-medium focus:outline-none"
                   >
-                    <option value="WATER_SUPPLY">Water Supply / पेयजल</option>
-                    <option value="HEALTH_CAMP">Health Camp / स्वास्थ्य शिविर</option>
-                    <option value="GRAM_SABHA">Gram Sabha / ग्राम सभा</option>
-                    <option value="ELECTRICITY">Electricity / विद्युत आपूर्ति</option>
-                    <option value="WELFARE_SCHEME">Govt Scheme / कल्याणकारी योजना</option>
+                    <option value="CIVIC_SUPPLY">Civic Supply (Water / Power)</option>
+                    <option value="HEALTH_CAMP">Health Camp</option>
+                    <option value="PANCHAYAT_SESSION">Gram Sabha Session</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-stone-700 mb-1">
-                    {isHi ? 'दिनांक / समय' : 'Date & Venue'}
-                  </label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Date & Venue</label>
                   <input
                     type="text"
                     placeholder="e.g. Tomorrow at 10 AM, Panchayat Bhavan"
                     value={broadcast.event_date}
                     onChange={e => setBroadcast({ ...broadcast, event_date: e.target.value })}
-                    className="w-full text-sm px-3 py-2.5 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-800"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-stone-700 mb-1">
-                  {isHi ? 'विस्तृत विवरण' : 'Announcement Description'}
-                </label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Detailed Circular</label>
                 <textarea
                   rows="3"
                   required
-                  placeholder={isHi ? 'ग्रामीणों के लिए आवश्यक निर्देश...' : 'Details for villagers...'}
+                  placeholder="Official instructions for residents..."
                   value={broadcast.description}
                   onChange={e => setBroadcast({ ...broadcast, description: e.target.value })}
-                  className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                  className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-800"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={isPublishing}
-                className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm px-5 py-2.5 rounded-xl transition flex items-center gap-2 shadow-md"
+                className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition flex items-center gap-2 shadow-sm"
               >
-                <Send className="w-4 h-4" />
-                <span>{isPublishing ? 'Publishing...' : (isHi ? 'तुरंत प्रसारित करें (1-Click)' : 'Broadcast Live Now')}</span>
+                <Send className="w-3.5 h-3.5" />
+                <span>{isPublishing ? 'Broadcasting...' : 'Publish Official Circular'}</span>
               </button>
             </form>
           </div>

@@ -1,22 +1,37 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Navbar from './components/Navbar';
+import HeroMapSearch from './components/HeroMapSearch';
+import AreaProblemsDossier from './components/AreaProblemsDossier';
 import OfficerDashboard from './components/OfficerDashboard';
-import GrievanceDesk from './components/GrievanceDesk';
 import ServiceDesk from './components/ServiceDesk';
 import KisanMandi from './components/KisanMandi';
 import NoticeHealth from './components/NoticeHealth';
+import OfficerLoginModal from './components/OfficerLoginModal';
+import ReportGrievanceModal from './components/ReportGrievanceModal';
+import TrackComplaintModal from './components/TrackComplaintModal';
 import { api } from './api';
 import { 
-  AlertCircle, FileText, Sprout, HeartPulse, 
-  Building2, Users, Phone, ShieldCheck, RefreshCw 
+  Building2, MapPin, AlertCircle, FileText, 
+  Sprout, HeartPulse, Search, ShieldCheck, Lock, ArrowDown
 } from 'lucide-react';
 
 export default function App() {
   const [activeRole, setActiveRole] = useState('villager'); // 'villager' | 'officer'
-  const [villagerTab, setVillagerTab] = useState('grievances'); // 'grievances' | 'services' | 'mandi' | 'health'
-  const [lang, setLang] = useState('hi'); // 'hi' | 'en'
-  const isHi = lang === 'hi';
+  const [activeNavTab, setActiveNavTab] = useState('dossier'); // 'dossier' | 'services' | 'mandi' | 'health'
 
+  // Officer auth state
+  const [currentOfficer, setCurrentOfficer] = useState(null);
+  const [isOfficerLoginOpen, setIsOfficerLoginOpen] = useState(false);
+
+  // Modals for citizens (zero login required)
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isTrackModalOpen, setIsTrackModalOpen] = useState(false);
+
+  // Selected place / area state (defaults to Pipariya or null for all)
+  const [places, setPlaces] = useState([]);
+  const [selectedPlace, setSelectedPlace] = useState(null);
+
+  // Core Data States
   const [summary, setSummary] = useState(null);
   const [grievances, setGrievances] = useState([]);
   const [services, setServices] = useState([]);
@@ -26,12 +41,28 @@ export default function App() {
   const [healthSchedules, setHealthSchedules] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadAllData = async () => {
+  const dossierRef = useRef(null);
+
+  // Check saved officer session
+  useEffect(() => {
+    const savedOfficer = localStorage.getItem('officer_data');
+    const token = localStorage.getItem('officer_token');
+    if (savedOfficer && token) {
+      try {
+        setCurrentOfficer(JSON.parse(savedOfficer));
+      } catch (e) {
+        localStorage.removeItem('officer_data');
+      }
+    }
+  }, []);
+
+  const loadData = async (villageFilter = '') => {
     setIsLoading(true);
     try {
-      const [sumData, gData, sData, mData, fData, nData, hData] = await Promise.all([
-        api.getOfficerSummary(),
-        api.getGrievances(),
+      const [placesData, sumData, gData, sData, mData, fData, nData, hData] = await Promise.all([
+        api.searchPlaces(),
+        api.getOfficerSummary(villageFilter),
+        api.getGrievances(villageFilter),
         api.getServices(),
         api.getMandiRates(),
         api.getFertilizers(),
@@ -39,6 +70,13 @@ export default function App() {
         api.getHealthSchedules(),
       ]);
 
+      if (placesData && Array.isArray(placesData)) {
+        setPlaces(placesData);
+        // Default select first place if none selected
+        if (!selectedPlace && placesData.length > 0) {
+          setSelectedPlace(placesData[0]);
+        }
+      }
       if (sumData) setSummary(sumData);
       if (gData && Array.isArray(gData)) setGrievances(gData);
       if (sData && Array.isArray(sData)) setServices(sData);
@@ -47,196 +85,266 @@ export default function App() {
       if (nData && Array.isArray(nData)) setNotices(nData);
       if (hData && Array.isArray(hData)) setHealthSchedules(hData);
     } catch (e) {
-      console.error("Failed to fetch initial data", e);
+      console.error("Failed to load portal data", e);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    loadAllData();
-  }, []);
+    loadData(selectedPlace?.name || '');
+  }, [selectedPlace]);
+
+  // Place selection handler
+  const handleSelectPlace = (place) => {
+    setSelectedPlace(place);
+    setActiveNavTab('dossier');
+    // Smooth scroll down to the problems section
+    setTimeout(() => {
+      dossierRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 150);
+  };
+
+  const handleResetPlace = () => {
+    setSelectedPlace(null);
+  };
+
+  const handleOfficerLoginSuccess = (officerData) => {
+    setCurrentOfficer(officerData);
+    setActiveRole('officer');
+    loadData(selectedPlace?.name || '');
+  };
+
+  const handleOfficerLogout = () => {
+    localStorage.removeItem('officer_token');
+    localStorage.removeItem('officer_data');
+    setCurrentOfficer(null);
+    setActiveRole('villager');
+    loadData(selectedPlace?.name || '');
+  };
 
   return (
-    <div className="min-h-screen bg-stone-100/70 text-stone-900 flex flex-col font-sans selection:bg-emerald-200">
-      {/* Navigation Header */}
+    <div className="min-h-screen bg-slate-100/80 text-slate-900 flex flex-col font-sans selection:bg-emerald-200">
+      {/* Official Government Top Navigation */}
       <Navbar 
-        activeRole={activeRole} 
-        setActiveRole={setActiveRole} 
-        lang={lang} 
-        setLang={setLang}
-        urgentNoticeCount={notices.length}
+        currentOfficer={currentOfficer}
+        onOpenOfficerLogin={() => setIsOfficerLoginOpen(true)}
+        onOfficerLogout={handleOfficerLogout}
+        activeRole={activeRole}
+        setActiveRole={setActiveRole}
+        selectedPlace={selectedPlace}
+        onResetPlace={handleResetPlace}
+        onQuickTrackClick={() => setIsTrackModalOpen(true)}
       />
 
-      {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* Hero Section with 3D Map of India & Place Search Bar */}
+      {activeRole === 'villager' && (
+        <HeroMapSearch 
+          places={places}
+          selectedPlace={selectedPlace}
+          onSelectPlace={handleSelectPlace}
+          onResetPlace={handleResetPlace}
+          totalGrievanceCount={grievances.length}
+          criticalCount={grievances.filter(g => g.urgency === 'CRITICAL' && g.status !== 'RESOLVED').length}
+        />
+      )}
+
+      {/* Main Content Area */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8" ref={dossierRef}>
         
-        {/* Quick Context Bar for Villager Mode */}
-        {activeRole === 'villager' && (
-          <div className="mb-6">
-            {/* Tab Buttons */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+        {/* If Officer Radar is Active */}
+        {activeRole === 'officer' ? (
+          <OfficerDashboard 
+            currentOfficer={currentOfficer}
+            summary={summary}
+            grievances={grievances}
+            services={services}
+            fertilizers={fertilizers}
+            refreshData={() => loadData(selectedPlace?.name || '')}
+            selectedPlace={selectedPlace}
+          />
+        ) : (
+          /* Villager View (Zero Login Required) */
+          <div>
+            {/* Navigation Tabs Bar */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-6 scrollbar-none border-b border-slate-200">
               <button
-                onClick={() => setVillagerTab('grievances')}
-                className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap shadow-sm ${
-                  villagerTab === 'grievances'
-                    ? 'bg-emerald-800 text-white shadow-emerald-800/20'
-                    : 'bg-white text-stone-700 hover:bg-stone-50 border border-stone-200'
+                onClick={() => setActiveNavTab('dossier')}
+                className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap ${
+                  activeNavTab === 'dossier'
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200'
                 }`}
               >
-                <AlertCircle className="w-4 h-4 text-amber-400" />
-                <span>{isHi ? 'समस्या निवारण (हैंडपंप, पानी, बिजली)' : 'Civic Grievance Hotline'}</span>
-                <span className="bg-emerald-950/40 text-emerald-200 text-[10px] px-1.5 py-0.2 rounded-full">
+                <AlertCircle className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Area Civic Problems & Grievances</span>
+                <span className="bg-slate-800 text-slate-200 text-[10px] px-1.5 py-0.2 rounded font-mono">
                   {grievances.length}
                 </span>
               </button>
 
               <button
-                onClick={() => setVillagerTab('services')}
-                className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap shadow-sm ${
-                  villagerTab === 'services'
-                    ? 'bg-sky-800 text-white shadow-sky-800/20'
-                    : 'bg-white text-stone-700 hover:bg-stone-50 border border-stone-200'
+                onClick={() => setActiveNavTab('services')}
+                className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap ${
+                  activeNavTab === 'services'
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200'
                 }`}
               >
-                <FileText className="w-4 h-4 text-sky-300" />
-                <span>{isHi ? 'प्रमाण पत्र एवं पेंशन डेस्क' : 'Certificates & Pension Desk'}</span>
-                <span className="bg-sky-950/40 text-sky-200 text-[10px] px-1.5 py-0.2 rounded-full">
+                <FileText className="w-3.5 h-3.5 text-sky-400" />
+                <span>Certificates & Welfare Desk</span>
+                <span className="bg-slate-800 text-slate-200 text-[10px] px-1.5 py-0.2 rounded font-mono">
                   {services.length}
                 </span>
               </button>
 
               <button
-                onClick={() => setVillagerTab('mandi')}
-                className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap shadow-sm ${
-                  villagerTab === 'mandi'
-                    ? 'bg-amber-800 text-white shadow-amber-800/20'
-                    : 'bg-white text-stone-700 hover:bg-stone-50 border border-stone-200'
+                onClick={() => setActiveNavTab('mandi')}
+                className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap ${
+                  activeNavTab === 'mandi'
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200'
                 }`}
               >
-                <Sprout className="w-4 h-4 text-amber-300" />
-                <span>{isHi ? 'मंडी भाव व खाद स्टॉक' : 'Mandi Rates & Fertilizer'}</span>
-                <span className="bg-amber-950/40 text-amber-200 text-[10px] px-1.5 py-0.2 rounded-full">
+                <Sprout className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Mandi Prices & PACS Fertilizer</span>
+                <span className="bg-emerald-950 text-emerald-300 text-[10px] px-1.5 py-0.2 rounded font-mono">
                   Live
                 </span>
               </button>
 
               <button
-                onClick={() => setVillagerTab('health')}
-                className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap shadow-sm ${
-                  villagerTab === 'health'
-                    ? 'bg-teal-800 text-white shadow-teal-800/20'
-                    : 'bg-white text-stone-700 hover:bg-stone-50 border border-stone-200'
+                onClick={() => setActiveNavTab('health')}
+                className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap ${
+                  activeNavTab === 'health'
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200'
                 }`}
               >
-                <HeartPulse className="w-4 h-4 text-rose-400" />
-                <span>{isHi ? 'डॉक्टर सारणी व सूचना पट्ट' : 'Doctor OPD & Notice Board'}</span>
-                <span className="bg-teal-950/40 text-teal-200 text-[10px] px-1.5 py-0.2 rounded-full">
+                <HeartPulse className="w-3.5 h-3.5 text-rose-400" />
+                <span>Doctor OPD & Public Circulars</span>
+                <span className="bg-slate-800 text-slate-200 text-[10px] px-1.5 py-0.2 rounded font-mono">
                   {notices.length}
                 </span>
               </button>
             </div>
-          </div>
-        )}
 
-        {/* View Switcher: Officer vs Villager */}
-        {activeRole === 'officer' ? (
-          <OfficerDashboard 
-            summary={summary}
-            grievances={grievances}
-            services={services}
-            fertilizers={fertilizers}
-            refreshData={loadAllData}
-            lang={lang}
-          />
-        ) : (
-          <div>
-            {villagerTab === 'grievances' && (
-              <GrievanceDesk 
-                grievances={grievances} 
-                refreshData={loadAllData} 
-                lang={lang} 
+            {/* Tab Contents */}
+            {activeNavTab === 'dossier' && (
+              <AreaProblemsDossier 
+                selectedPlace={selectedPlace}
+                grievances={grievances}
+                currentOfficer={currentOfficer}
+                onRefresh={() => loadData(selectedPlace?.name || '')}
+                onOpenReportModal={() => setIsReportModalOpen(true)}
+                onOpenTrackModal={() => setIsTrackModalOpen(true)}
               />
             )}
-            {villagerTab === 'services' && (
+
+            {activeNavTab === 'services' && (
               <ServiceDesk 
-                services={services} 
-                refreshData={loadAllData} 
-                lang={lang} 
+                services={services}
+                refreshData={() => loadData(selectedPlace?.name || '')}
+                selectedPlace={selectedPlace}
               />
             )}
-            {villagerTab === 'mandi' && (
+
+            {activeNavTab === 'mandi' && (
               <KisanMandi 
-                mandiRates={mandiRates} 
-                fertilizers={fertilizers} 
-                lang={lang} 
+                mandiRates={mandiRates}
+                fertilizers={fertilizers}
               />
             )}
-            {villagerTab === 'health' && (
+
+            {activeNavTab === 'health' && (
               <NoticeHealth 
-                notices={notices} 
-                healthSchedules={healthSchedules} 
-                lang={lang} 
+                notices={notices}
+                healthSchedules={healthSchedules}
               />
             )}
           </div>
         )}
       </main>
 
-      {/* Village Emergency Helpline Footer */}
-      <footer className="mt-12 bg-stone-900 text-white border-t border-stone-800 py-8">
+      {/* Modals */}
+      <OfficerLoginModal 
+        isOpen={isOfficerLoginOpen}
+        onClose={() => setIsOfficerLoginOpen(false)}
+        onLoginSuccess={handleOfficerLoginSuccess}
+      />
+
+      <ReportGrievanceModal 
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        selectedPlace={selectedPlace}
+        onGrievanceCreated={() => loadData(selectedPlace?.name || '')}
+      />
+
+      <TrackComplaintModal 
+        isOpen={isTrackModalOpen}
+        onClose={() => setIsTrackModalOpen(false)}
+        currentOfficer={currentOfficer}
+      />
+
+      {/* Footer */}
+      <footer className="mt-16 bg-slate-950 text-slate-300 border-t border-slate-800 py-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8 text-xs">
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-xl">🌾</span>
-                <h4 className="font-extrabold text-white text-base">GramSeva</h4>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-7 h-7 rounded-lg bg-emerald-700 flex items-center justify-center text-white font-bold text-xs">
+                  GS
+                </div>
+                <h4 className="font-extrabold text-white text-sm">GRAMSEVA</h4>
               </div>
-              <p className="text-xs text-stone-400 leading-relaxed">
-                {isHi 
-                  ? 'भारतीय ग्रामीण क्षेत्र हेतु एकीकृत समाधान पोर्टल। बिना किसी जटिलता, 1 दृश्य में नागरिक एवं अधिकारी समस्याओं का निस्तारण।' 
-                  : 'Integrated smart governance and problem redressal system for Indian Gram Panchayats.'}
+              <p className="text-slate-400 leading-relaxed">
+                National Rural Civic Infrastructure Redressal & E-Governance Platform. Built for Indian Gram Panchayats with privacy-first citizen tracking and 1-view officer decision command.
               </p>
             </div>
 
             <div>
-              <h5 className="font-bold text-xs uppercase tracking-wider text-amber-400 mb-2">
-                {isHi ? 'ग्राम पंचायत कार्यालय' : 'Panchayat Office'}
+              <h5 className="font-bold text-slate-200 uppercase tracking-wider mb-3">
+                Administrative Divisions
               </h5>
-              <p className="text-xs text-stone-400 space-y-1">
-                <span className="block">📍 Panchayat Bhavan, Ward 1</span>
-                <span className="block">📞 Secretary / Sachiv: 9826011223</span>
-                <span className="block">⏰ Mon - Sat: 10:00 AM - 5:00 PM</span>
-              </p>
-            </div>
-
-            <div>
-              <h5 className="font-bold text-xs uppercase tracking-wider text-emerald-400 mb-2">
-                {isHi ? 'आपातकालीन राष्ट्रीय हेल्पलाइन' : 'National Helplines'}
-              </h5>
-              <div className="text-xs text-stone-400 space-y-1">
-                <p>🚨 CM Citizen Helpline: <strong className="text-white">181</strong></p>
-                <p>🌾 Kisan Call Centre: <strong className="text-white">1800-180-1551</strong></p>
-                <p>🚑 Ambulance / Medical: <strong className="text-white">108</strong></p>
-                <p>⚡ Electricity Breakdown: <strong className="text-white">1912</strong></p>
+              <div className="space-y-1.5 text-slate-400">
+                <p>Gram Panchayat Pipariya (Ward 1 - 7)</p>
+                <p>Gram Panchayat Rampur (Ward 1 - 5)</p>
+                <p>Gram Panchayat Khedi (Ward 1 - 6)</p>
+                <p>Semri Harchand & Mandla Rural Divisions</p>
               </div>
             </div>
 
             <div>
-              <h5 className="font-bold text-xs uppercase tracking-wider text-sky-400 mb-2">
-                {isHi ? 'तकनीकी वास्तुकला' : 'Architecture'}
+              <h5 className="font-bold text-slate-200 uppercase tracking-wider mb-3">
+                Emergency Helplines
               </h5>
-              <p className="text-xs text-stone-400">
-                Frontend: <span className="text-white font-medium">React.js + Tailwind</span><br />
-                Backend: <span className="text-white font-medium">Django + DRF</span><br />
-                Database: <span className="text-white font-medium">Django Default SQLite</span><br />
-                Design: <span className="text-white font-medium">1-Click / Zero AI Prompt</span>
+              <div className="space-y-1.5 text-slate-400 font-mono">
+                <p>CM Citizen Call Center: 181</p>
+                <p>Kisan Call Center: 1800-180-1551</p>
+                <p>Medical Emergency Dispatch: 108</p>
+                <p>Power Grid Emergency: 1912</p>
+              </div>
+            </div>
+
+            <div>
+              <h5 className="font-bold text-slate-200 uppercase tracking-wider mb-3">
+                Security & Privacy
+              </h5>
+              <p className="text-slate-400 leading-relaxed">
+                Citizen identities are automatically masked under privacy protocol. Complainer contact details are decrypted and made accessible strictly to authorized local Panchayat Officers upon credential verification.
               </p>
             </div>
           </div>
 
-          <div className="pt-6 border-t border-stone-800 text-center text-xs text-stone-500">
-            © {new Date().getFullYear()} GramSeva · Designed for Indian Villages & Local Governance
+          <div className="pt-6 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+            <div>
+              © {new Date().getFullYear()} GramSeva · Ministry of Panchayati Raj · Government of India
+            </div>
+            <div className="flex items-center gap-4">
+              <span>Privacy Guard v2.4</span>
+              <span>·</span>
+              <span>Django REST + React + Three.js 3D GIS</span>
+            </div>
           </div>
         </div>
       </footer>

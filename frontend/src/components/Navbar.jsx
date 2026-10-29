@@ -1,86 +1,130 @@
 import React from 'react';
-import { Shield, Users, Building2, Bell, Globe, Sparkles } from 'lucide-react';
+import { Shield, Building2, Lock, LogOut, Search, MapPin, CheckCircle, UserCheck } from 'lucide-react';
 
-export default function Navbar({ activeRole, setActiveRole, lang, setLang, urgentNoticeCount }) {
-  const isHi = lang === 'hi';
-
+export default function Navbar({ 
+  currentOfficer, 
+  onOpenOfficerLogin, 
+  onOfficerLogout, 
+  activeRole, 
+  setActiveRole, 
+  selectedPlace, 
+  onResetPlace,
+  onQuickTrackClick
+}) {
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-amber-100 shadow-sm">
-      {/* Top emergency notice ribbon */}
-      <div className="bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-800 text-white text-xs py-1.5 px-4 font-medium flex items-center justify-between">
-        <div className="flex items-center gap-2 max-w-4xl truncate">
-          <span className="bg-amber-400 text-stone-900 font-bold px-1.5 py-0.5 rounded text-[11px] uppercase tracking-wider animate-pulse">
-            {isHi ? 'ताजा सूचना' : 'Gram Live'}
-          </span>
-          <span className="truncate">
-            {isHi 
-              ? '📢 विशेष ग्राम सभा: 2 नवम्बर सुबह 10:30 बजे | वार्ड 3 में पेयजल टैंकर व्यवस्था जारी'
-              : '📢 Special Gram Sabha: 2nd Nov at 10:30 AM | Emergency Water Tanker active in Ward 3'}
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="hidden sm:inline-block text-emerald-200">
-            {isHi ? 'डिजिटल भारत - सशक्त ग्राम' : 'Digital India - Empowered Villages'}
-          </span>
-          <button 
-            onClick={() => setLang(l => l === 'en' ? 'hi' : 'en')}
-            className="flex items-center gap-1 bg-white/20 hover:bg-white/30 text-white px-2 py-0.5 rounded transition text-xs"
-          >
-            <Globe className="w-3.5 h-3.5" />
-            <span>{isHi ? 'English' : 'हिंदी'}</span>
-          </button>
+    <header className="sticky top-0 z-40 bg-slate-900 border-b border-slate-800 text-slate-100 shadow-sm">
+      {/* Official top stripe */}
+      <div className="bg-slate-950 px-4 py-1.5 border-b border-slate-800/80 text-[11px] text-slate-400 font-medium">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-slate-300 font-semibold tracking-wide">
+              GOVERNMENT OF INDIA · PANCHAYATI RAJ DEPARTMENT
+            </span>
+            <span className="hidden md:inline text-slate-600">|</span>
+            <span className="hidden md:inline text-slate-400">
+              National Civic Infrastructure & Grievance Redressal Network
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={onQuickTrackClick}
+              className="text-slate-300 hover:text-white flex items-center gap-1 transition"
+            >
+              <Search className="w-3 h-3 text-emerald-400" />
+              <span>Track Complaint Ticket</span>
+            </button>
+            <span className="text-slate-600">|</span>
+            <span className="text-emerald-400 font-mono text-[10px]">
+              NODE: LIVE MP-78
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Main navigation */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between flex-wrap gap-3">
+      {/* Main Bar */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between gap-4 flex-wrap">
+        {/* Brand */}
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-600 via-amber-500 to-orange-500 flex items-center justify-center text-white shadow-md shadow-emerald-700/20">
-            <span className="text-2xl">🌾</span>
+          <div 
+            onClick={onResetPlace}
+            className="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-emerald-400 font-black text-lg cursor-pointer hover:border-emerald-500 transition shadow-inner"
+          >
+            GS
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-black tracking-tight text-stone-900 flex items-center gap-1.5">
-                GramSeva
-                <span className="text-xs font-semibold px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full">
-                  {isHi ? 'ग्राम सेवा' : 'Smart Village'}
-                </span>
+              <h1 
+                onClick={onResetPlace}
+                className="text-lg font-extrabold tracking-tight text-white cursor-pointer hover:text-emerald-300 transition"
+              >
+                GRAMSEVA
               </h1>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800/60 uppercase tracking-wider">
+                Civic Portal
+              </span>
             </div>
-            <p className="text-xs text-stone-500 font-medium">
-              {isHi ? 'ग्राम पंचायत पिपरिया (तहसील: सोहागपुर, नर्मदापुरम)' : 'Gram Panchayat Pipariya (Tehsil: Sohagpur, Narmadapuram)'}
+            <p className="text-[11px] text-slate-400 font-medium">
+              {selectedPlace ? (
+                <span className="text-emerald-300 flex items-center gap-1">
+                  <MapPin className="w-3 h-3" />
+                  <span>{selectedPlace.gram_panchayat || selectedPlace.name} · {selectedPlace.district}</span>
+                </span>
+              ) : (
+                'Pan-India Village Search & Civic Resolution System'
+              )}
             </p>
           </div>
         </div>
 
-        {/* Role toggle button */}
-        <div className="flex items-center gap-2 bg-stone-100 p-1.5 rounded-2xl border border-stone-200">
-          <button
-            onClick={() => setActiveRole('villager')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl font-semibold text-xs transition-all ${
-              activeRole === 'villager'
-                ? 'bg-white text-emerald-800 shadow-sm border border-stone-200'
-                : 'text-stone-600 hover:text-stone-900'
-            }`}
-          >
-            <Users className="w-4 h-4 text-emerald-600" />
-            <span>{isHi ? 'नागरिक पोर्टल' : 'Villager Portal'}</span>
-          </button>
+        {/* Action Controls */}
+        <div className="flex items-center gap-2.5">
+          {/* If Officer is logged in */}
+          {currentOfficer ? (
+            <div className="flex items-center gap-2 bg-slate-800/80 p-1.5 rounded-xl border border-slate-700">
+              <div className="px-2.5 py-1 text-left">
+                <span className="text-xs font-semibold text-white block">
+                  {currentOfficer.name}
+                </span>
+                <span className="text-[10px] text-emerald-400 block font-mono">
+                  {currentOfficer.designation} · {currentOfficer.badge}
+                </span>
+              </div>
 
-          <button
-            onClick={() => setActiveRole('officer')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl font-semibold text-xs transition-all ${
-              activeRole === 'officer'
-                ? 'bg-stone-900 text-amber-300 shadow-sm'
-                : 'text-stone-600 hover:text-stone-900'
-            }`}
-          >
-            <Building2 className="w-4 h-4 text-amber-400" />
-            <span>{isHi ? 'अधिकारी नियंत्रण कक्ष' : 'Officer Command Radar'}</span>
-            <span className="bg-amber-400/20 text-amber-300 text-[10px] px-1.5 py-0.2 rounded-full font-bold">
-              1-Click
-            </span>
-          </button>
+              <button
+                onClick={() => setActiveRole(activeRole === 'officer' ? 'villager' : 'officer')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                  activeRole === 'officer'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
+                }`}
+              >
+                {activeRole === 'officer' ? 'Viewing Officer Radar' : 'Open Officer Radar'}
+              </button>
+
+              <button
+                onClick={onOfficerLogout}
+                title="Sign out of Officer Portal"
+                className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg transition"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            /* If not logged in as officer */
+            <div className="flex items-center gap-2">
+              <span className="hidden sm:inline text-xs text-slate-400">
+                Local Panchayat Official?
+              </span>
+              <button
+                onClick={onOpenOfficerLogin}
+                className="px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition flex items-center gap-1.5 shadow-sm"
+              >
+                <Lock className="w-3.5 h-3.5" />
+                <span>Officer Sign In</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>

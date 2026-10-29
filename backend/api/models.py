@@ -2,24 +2,47 @@ from django.db import models
 from django.utils import timezone
 import random
 
+class VillagePlace(models.Model):
+    name = models.CharField(max_length=150)
+    full_name = models.CharField(max_length=255)
+    gram_panchayat = models.CharField(max_length=150)
+    tehsil = models.CharField(max_length=100)
+    district = models.CharField(max_length=100)
+    state = models.CharField(max_length=100, default='Madhya Pradesh')
+    pincode = models.CharField(max_length=10, blank=True)
+    lat = models.FloatField(default=22.7553)
+    lng = models.FloatField(default=78.3551)
+    population = models.IntegerField(default=5000)
+    total_wards = models.IntegerField(default=7)
+
+    def __str__(self):
+        return f"{self.gram_panchayat}, {self.district}"
+
+
 class Grievance(models.Model):
     STATUS_CHOICES = [
-        ('PENDING', 'Pending / लंबित'),
-        ('IN_PROGRESS', 'In Progress / कार्यवाही जारी'),
-        ('SANCTIONED', 'Fund Sanctioned / बजट स्वीकृत'),
-        ('RESOLVED', 'Resolved / निस्तारित'),
-        ('REJECTED', 'Rejected / अस्वीकृत'),
+        ('PENDING', 'Pending'),
+        ('IN_PROGRESS', 'In Progress'),
+        ('SANCTIONED', 'Fund Sanctioned'),
+        ('RESOLVED', 'Resolved'),
+        ('REJECTED', 'Rejected'),
     ]
 
     URGENCY_CHOICES = [
-        ('NORMAL', 'Normal / सामान्य'),
-        ('URGENT', 'Urgent / आवश्यक'),
-        ('CRITICAL', 'Emergency / अति-आवश्यक'),
+        ('NORMAL', 'Normal'),
+        ('URGENT', 'Urgent'),
+        ('CRITICAL', 'Emergency'),
     ]
 
     ticket_id = models.CharField(max_length=30, unique=True, blank=True)
+    village_name = models.CharField(max_length=150, default='Pipariya')
+    district = models.CharField(max_length=100, default='Narmadapuram')
+    state = models.CharField(max_length=100, default='Madhya Pradesh')
+    
+    # Citizen details (masked for public view)
     citizen_name = models.CharField(max_length=150)
     mobile = models.CharField(max_length=15)
+    
     ward = models.CharField(max_length=100)
     category = models.CharField(max_length=100)
     urgency = models.CharField(max_length=20, choices=URGENCY_CHOICES, default='NORMAL')
@@ -39,19 +62,20 @@ class Grievance(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.ticket_id} - {self.category} ({self.ward})"
+        return f"{self.ticket_id} - {self.category} ({self.village_name})"
 
 
 class ServiceApplication(models.Model):
     STATUS_CHOICES = [
-        ('SUBMITTED', 'Submitted / प्राप्त'),
-        ('UNDER_VERIFICATION', 'Under Verification / सत्यापन जारी'),
-        ('APPROVED', 'Approved / स्वीकृत'),
-        ('READY_FOR_PICKUP', 'Ready for Digital Pickup / जारी'),
-        ('REJECTED', 'Rejected / निरस्त'),
+        ('SUBMITTED', 'Submitted'),
+        ('UNDER_VERIFICATION', 'Under Verification'),
+        ('APPROVED', 'Approved'),
+        ('READY_FOR_PICKUP', 'Ready for Digital Pickup'),
+        ('REJECTED', 'Rejected'),
     ]
 
     token_number = models.CharField(max_length=30, unique=True, blank=True)
+    village_name = models.CharField(max_length=150, default='Pipariya')
     applicant_name = models.CharField(max_length=150)
     guardian_name = models.CharField(max_length=150)
     mobile = models.CharField(max_length=15)
@@ -77,14 +101,14 @@ class ServiceApplication(models.Model):
 
 class MandiRate(models.Model):
     TREND_CHOICES = [
-        ('UP', 'Rising / बढ़त (+5%)'),
-        ('DOWN', 'Falling / गिरावट (-3%)'),
-        ('STABLE', 'Stable / स्थिर'),
+        ('UP', 'Rising'),
+        ('DOWN', 'Falling'),
+        ('STABLE', 'Stable'),
     ]
 
     crop_name = models.CharField(max_length=100)
     crop_name_hindi = models.CharField(max_length=100)
-    modal_price = models.DecimalField(max_digits=10, decimal_places=2) # Per Quintal
+    modal_price = models.DecimalField(max_digits=10, decimal_places=2)
     min_price = models.DecimalField(max_digits=10, decimal_places=2)
     max_price = models.DecimalField(max_digits=10, decimal_places=2)
     msp_price = models.DecimalField(max_digits=10, decimal_places=2)
@@ -112,9 +136,9 @@ class FertilizerStock(models.Model):
 
 class VillageNotice(models.Model):
     PRIORITY_CHOICES = [
-        ('NORMAL', 'General / सामान्य'),
-        ('HIGH', 'Important / महत्वपूर्ण'),
-        ('URGENT', 'Emergency / आपातकालीन'),
+        ('NORMAL', 'General'),
+        ('HIGH', 'Important'),
+        ('URGENT', 'Emergency'),
     ]
 
     title = models.CharField(max_length=255)
@@ -123,7 +147,7 @@ class VillageNotice(models.Model):
     priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='NORMAL')
     event_date = models.CharField(max_length=100, blank=True)
     venue = models.CharField(max_length=200, blank=True)
-    issued_by = models.CharField(max_length=150, default='Gram Panchayat Sachiv / Pradhan')
+    issued_by = models.CharField(max_length=150, default='Gram Panchayat Secretary / VDO')
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -138,7 +162,7 @@ class HealthSchedule(models.Model):
     visiting_time = models.CharField(max_length=200)
     location = models.CharField(max_length=200)
     contact_number = models.CharField(max_length=15)
-    medicine_stock = models.CharField(max_length=100, default='Adequate / पूर्ण उपलब्धता')
+    medicine_stock = models.CharField(max_length=100, default='Adequate Supply Available')
 
     def __str__(self):
         return f"{self.practitioner_name} - {self.service_type}"
